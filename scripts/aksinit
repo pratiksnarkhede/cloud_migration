@@ -1,0 +1,48 @@
+#!/bin/bash
+source $HOME/Desktop/terraform-azure-aksacr/scripts/progress_bar.sh || exit 1
+
+source ./alert.sh
+
+cd ..
+
+validate_tfinstall() {
+    if ! command -v terraform &>/dev/null; then
+        echo "🤣 Using Terraform without installing terraform"
+        exit 1
+    fi
+}
+validate_tfinstall
+
+terraform_init() {
+    echo "Running Terraform init"
+    {
+        terraform init --upgrade &>/dev/null
+    }
+}
+terraform_init
+
+terraform_plan() {
+    echo "Running Terraform Plan"
+    {
+        terraform plan -out main.tfplan -var-file personalenv.tfvars
+    } >/dev/null &
+
+    progress_bar_movement 1
+
+    echo -e "\n✅ Terraform plan completed"
+}
+terraform_plan
+
+terraform_apply() {
+    echo "Running Terraform apply..."
+    {
+        terraform apply main.tfplan
+    } >/dev/null &
+
+    progress_bar_movement 5
+    echo -e "\n✅ Terraform apply complete."
+    send_alert "AKS Cluster is created 🎉"
+    echo "Execute the aks_connect.sh to connect"
+
+}
+terraform_apply
